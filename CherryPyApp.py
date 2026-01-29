@@ -44,6 +44,7 @@ import diagnostics
 import Sitemap
 import Formatters
 from errors import ErrorPage
+from opds2 import OPDSFeed
 
 import Timer
 
@@ -323,6 +324,16 @@ def main():
     app = cherrypy.tree.mount(root=None, config=CHERRYPY_CONFIG)
 
     app.merge({'/': {'request.dispatch': d}})
+
+    # Mount OPDS feed at /opds
+    cherrypy.log("Mounting OPDS feed", context='ENGINE', severity=logging.INFO)
+    cherrypy.tree.mount(OPDSFeed(), '/opds', {
+        '/': {
+            'tools.response_headers.on': True,
+            'tools.response_headers.headers': [('Access-Control-Allow-Origin', '*')],
+        }
+    })
+
     return app
 
 
