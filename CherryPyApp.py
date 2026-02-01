@@ -172,7 +172,8 @@ def main():
         cherrypy.engine, params=GutenbergDatabase.get_connection_params(cherrypy.config))
     cherrypy.engine.pool.subscribe()
 
-    plugins.Timer(cherrypy.engine).subscribe()
+    timer = plugins.Timer(cherrypy.engine)
+    timer.subscribe()
 
     cherrypy.log("Daemonizing", context='ENGINE', severity=logging.INFO)
 
@@ -327,7 +328,14 @@ def main():
 
     # Mount OPDS feed at /opds
     cherrypy.log("Mounting OPDS feed", context='ENGINE', severity=logging.INFO)
-    cherrypy.tree.mount(OPDSFeed(), '/opds', {
+    opds_feed = OPDSFeed()
+
+    # Subscribe OPDS cache warming to the engine and timer.
+    # Run once on start, then every 24 hours.
+    cherrypy.engine.subscribe('start', opds_feed._initial_warm)
+    timer.add(24 * 60 * 60, opds_feed._warm_cache)
+
+    cherrypy.tree.mount(opds_feed, '/opds', {
         '/': {
             'tools.response_headers.on': True,
             'tools.response_headers.headers': [
